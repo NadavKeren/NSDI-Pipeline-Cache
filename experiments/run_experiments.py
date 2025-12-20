@@ -207,9 +207,9 @@ def run_test(fname: str, trace_name: str, cache_size: int, output_filename : str
                 raise AssertionError()
 
         #* Clean the results_dump files, relevant only to the synthetic trace experiments
-        results_files = [file.resolve() for file in dump_path.rglob('*.results_dump')]
-        for results_file in dump_path.rglob('*.results_dump'):
-                results_file.unlink()
+        results_files = [file.resolve() for file in Path(f'{caffeine_root}').rglob('*.results_dump')]
+        for file in results_files:
+                file.unlink()
 
 
 def run_full_ghost(fname: str, trace_name: str, cache_size: int) -> None:
