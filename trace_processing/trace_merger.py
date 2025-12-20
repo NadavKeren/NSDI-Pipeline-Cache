@@ -12,9 +12,6 @@ from typing import List
 
 from itertools import islice
 
-from latency_generators import *
-from utils import *
-
 CONSOLE = Console()
 pretty.install()
 
@@ -109,7 +106,20 @@ def changeTimestampsAndWriteToFile(input_files: List[Path], output_path: Path):
     
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description='Merge multiple IBM Object-Storage trace files with optional repetitions.',
+        epilog='''
+Example:
+  python trace_merger.py --input-dir ./traces --trace traceA --trace traceB --times 5 --trace traceC
+
+  This will merge traceA once, traceB five times, and traceC once.
+  Output filename: traceA-traceBx5-traceC.trace
+
+  If a trace appears only once, it's just the trace name.
+  If a trace is repeated multiple times, it's formatted as: traceName + "x" + count
+        ''',
+        formatter_class=argparse.RawDescriptionHelpFormatter
+    )
     parser.add_argument('--input-dir', help='The directory containing the original trace', type=str, required=True)
     parser.add_argument('--trace', help='A trace file to merge', type=str, action=TraceAction)
     parser.add_argument('--times', help='Number of times to repeat the previous trace (default: 1)', type=int, action=TimesAction)
@@ -126,27 +136,34 @@ def main():
     output_dir = input_dir / "merged"
     output_dir.mkdir(exist_ok=True)
 
+    print(f'Input dir: {str(input_dir.resolve())} Output dir: {str(output_dir.resolve())}')
+
     # Expand traces based on repetition counts
     expanded_traces = []
     for trace, times in trace_list:
         expanded_traces.extend([trace] * times)
 
-    trace_names = [get_trace_name(trace) for trace in expanded_traces]
     input_files = [input_dir / trace for trace in expanded_traces]
 
     CONSOLE.print(f"[bold cyan]Trace configuration:[/]")
     for trace, times in trace_list:
-        CONSOLE.print(f"  {trace}: {times}x")
+        trace_name = get_trace_name(trace)
+        CONSOLE.print(f"  {trace_name}: {times}x")
     CONSOLE.print(f"\n[bold cyan]Total files to merge:[/] {len(input_files)}")
-    CONSOLE.print(f"[bold cyan]Expanded trace names:[/] {trace_names}")
-    CONSOLE.print(f"[bold cyan]Input files:[/] {input_files}")
-    
+
     for file in input_files:
         start_time, end_time = calculate_file_start_and_end_times(file)
         CONSOLE.print(f'{str(file)}: {end_time - start_time}')
-    
 
-    setname = "IBMOS-" + "-".join(trace_names) + ".trace"
+    filename_parts = []
+    for trace, times in trace_list:
+        trace_name = get_trace_name(trace)
+        if times == 1:
+            filename_parts.append(trace_name)
+        else:
+            filename_parts.append(f"{trace_name}x{times}")
+
+    setname = "-".join(filename_parts) + ".trace"
     output_path = output_dir / setname
     changeTimestampsAndWriteToFile(input_files, output_path)
     

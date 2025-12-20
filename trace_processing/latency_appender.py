@@ -144,8 +144,8 @@ def main():
     
     parser.add_argument('-c', '--compress', help="Compress the newly created traces files", action='store_true')
     parser.add_argument('-v', '--verbose', help='Prints the time elapsed and number of unique entries for each file, in addition to the progress bar', action='store_true')
-    parser.add_argument('-i', '--input-dir', help='The processed files path', type=str, default=None)
-    parser.add_argument('-o', '--output-dir', help='The path for the newly created files', type=str, default=None)
+    parser.add_argument('-i', '--input-dir', help='The processed files dir path', type=str, default=None)
+    parser.add_argument('-o', '--output-dir', help='The path for the newly created files, default = (input_dir)/out_latencies', type=str, default=None)
     parser.add_argument('-b', '--key-base', help='The base of the key string', type=int, default=10)
     
     args = parser.parse_args()
@@ -153,7 +153,9 @@ def main():
     print(f'Given args: {str(args)}')
     
     INPUT_DIR = Path(args.input_dir if args.input_dir else './processed')
-    OUTPUT_DIR = Path(args.output_dir if args.output_dir else './out_latencies')
+    OUTPUT_DIR = Path(args.output_dir if args.output_dir else str(INPUT_DIR.resolve()) + './out_latencies')
+
+    print(f'Input dir: {str(INPUT_DIR.resolve())} Output dir: {str(OUTPUT_DIR.resolve())}')
     
     input_files_paths = list(f for f in INPUT_DIR.iterdir() if not f.is_dir())
 

@@ -61,6 +61,8 @@ def main():
     input_dir = Path(args.input_dir)
     output_dir = Path(args.output_dir)
 
+    print(f'Input dir: {str(input_dir.resolve())} Output dir: {str(output_dir.resolve())}')
+
     if not input_dir.exists():
         print(f'[bold red]Error: Input directory {input_dir} does not exist')
         return

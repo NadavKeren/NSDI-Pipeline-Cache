@@ -50,12 +50,18 @@ def processFiles(files: List[Path], output_dir: Path):
 def main():
     parser = argparse.ArgumentParser(description='Parse IBM Object Storage trace files')
     parser.add_argument('-i', '--input-dir', help='Input directory containing raw trace files', type=str, required=True)
-    parser.add_argument('-o', '--output-dir', help='Output directory for parsed traces (default: ./parsed_traces/IBMObjectStore)', type=str, default='./parsed_traces/IBMObjectStore')
+    parser.add_argument('-o', '--output-dir', help='Output directory for parsed traces (default: <input-dir>/parsed_traces/IBMObjectStore)', type=str, default=None)
 
     args = parser.parse_args()
 
     input_dir = Path(args.input_dir)
-    output_dir = Path(args.output_dir)
+
+    if args.output_dir is None:
+        output_dir = input_dir / 'parsed_traces/IBMObjectStore'
+    else:
+        output_dir = Path(args.output_dir)
+
+    print(f'Input dir: {str(input_dir.resolve())} Output dir: {str(output_dir.resolve())}')
 
     if not input_dir.exists():
         print(f'[bold red]Error: Input directory {input_dir} does not exist')

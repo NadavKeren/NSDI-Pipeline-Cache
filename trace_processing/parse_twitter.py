@@ -49,7 +49,7 @@ def process_csv_batches(input_file: Path, output_file: Path, batch_size: int = 1
             for row in batch:
                 operation = row.get('operation', '').strip().lower()
                 if operation in ['get', 'gets']:
-                    timestamp = row.get('timestamp', '').strip()
+                    timestamp = int(row.get('timestamp', '').strip()) * 1000  # Convert to milliseconds
                     last_timestamp = int(timestamp)
                     key = row.get('key', '').strip()
                     hashed_key = process_key(key)
