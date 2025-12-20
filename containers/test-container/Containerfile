@@ -6,12 +6,14 @@ RUN git clone https://github.com/NadavKeren/NSDI-Pipeline-Cache.git /home/artifa
 WORKDIR "/home/caffeine"
 RUN git checkout NSDI
 
+RUN pip install xxhash
+
 # FIRST COMPILATION
 RUN ./gradlew compileJava
 
 # Setting the simulation tools for the experiments
 WORKDIR "/home/artifact"
-RUN echo '{ "caffeine_root" : "/home/caffeine/", "resources" : "/home/traces/", "output" : "" , "results": "/home/results" }' > conf.json
+RUN echo '{ "caffeine_root" : "/home/caffeine/", "resources" : "/home/traces/", "output" : "" , "results": "/home/results" }' > experiments/conf.json
 
 ENTRYPOINT ["/bin/bash"]
 
