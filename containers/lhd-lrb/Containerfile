@@ -4,8 +4,9 @@ FROM ubuntu:18.04
 RUN mkdir -p /home/LRB
 
 # Install dependencies and clone LRB repo with submodules
-RUN apt-get update && apt-get install -y git sudo libconfig++-dev && \
-    git clone --recurse-submodules https://github.com/NadavKeren/lrb-tagged.git /home/LRB
+RUN apt-get update && apt-get install -y git sudo libconfig++-dev python3 && \
+    git clone --recurse-submodules https://github.com/NadavKeren/lrb-tagged.git /home/LRB && \
+    update-alternatives --install /usr/bin/python python /usr/bin/python3 1
 
 # Run install script from the LRB directory
 WORKDIR /home/LRB
@@ -21,10 +22,12 @@ RUN git clone https://github.com/NadavKeren/LHD-tagged.git /home/LHD
 WORKDIR /home/LHD
 RUN make
 
+ARG CACHE_BREAKER=initial_value
 # Copy the run script
-COPY experiments/run_lhd_lrb.py /home/run_lhd_lrb.py
+COPY ./run_lhd_lrb.py /home/run_lhd_lrb.py
 RUN chmod +x /home/run_lhd_lrb.py
 
+ENV WEBCACHESIM_TRACE_DIR=/home/traces/LRB
 # Set working directory to /home and default command to bash
 WORKDIR /home
 CMD ["/bin/bash"]

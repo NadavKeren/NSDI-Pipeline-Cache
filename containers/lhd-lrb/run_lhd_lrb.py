@@ -22,23 +22,24 @@ SIZES = {
 }
 
 def count_trace_lines(trace_path):
-    with open(trace_path, 'r') as f:
-        return sum(1 for _ in f)
+    result = subprocess.run(['wc', '-l', str(trace_path)], stdout=subprocess.PIPE, stderr=subprocess.PIPE, universal_newlines=True, check=True)
+    line_count = int(result.stdout.split()[0])
+    return line_count
 
 def create_lhd_config(trace_file, trace_name, cache_size, total_accesses):
     config_content = f"""cache:
 {{
     admissionSamples = 8;
-    associativity = 64;
+    assoc = 64;
     capacity = {cache_size};
 }};
 
 repl:
 {{
-    nClasses = 16;
-    maxRefs = 3;
-    debug = false;
-    errTolerance = 0.01;
+    appClasses = 16;
+    maxReferences = 3;
+    fullDebugInfo = false;
+    ageCoarseningErrorTolerance = 0.01;
     accsPerInterval = {min(1000 * cache_size, total_accesses)};
     ewmaDecay = 0.9;
     type = "LHD";
@@ -47,8 +48,9 @@ repl:
 trace:
 {{
     totalAccesses = {total_accesses};
-    file = "{trace_file}";
-    path = "/home/traces/";
+    file = "{trace_file.name}";
+    name = "{trace_name}";
+    path = "/home/traces/LRB/{trace_file.name}";
 }};
 """
 
@@ -62,23 +64,23 @@ def run_lhd(config_path, trace_name):
     print(f"Running LHD for {trace_name}...")
     subprocess.run(['/home/LHD/bin/cache', str(config_path)], check=True)
 
-    dump_files = list(Path('/home').glob('*.dump'))
+    dump_files = list(Path('/home').glob('LHD-*.dump'))
     if dump_files:
         for dump_file in dump_files:
             dest = Path('/home/results') / f'LHD-{trace_name}.dump'
             shutil.move(str(dump_file), str(dest))
             print(f"Moved LHD dump file to {dest}")
 
-def run_lrb(trace_path, trace_name, cache_size):
+def run_lrb(trace_filename, trace_name, cache_size):
     print(f"Running LRB for {trace_name}...")
     subprocess.run([
         '/home/LRB/build/bin/webcachesim_cli',
-        str(trace_path),
+        str(trace_filename),
         'LRB',
         str(cache_size)
     ], check=True)
 
-    dump_files = list(Path('/home').glob('*.dump'))
+    dump_files = list(Path('/home').glob('LRB-*.dump'))
     if dump_files:
         for dump_file in dump_files:
             dest = Path('/home/results') / f'LRB-{trace_name}.dump'
@@ -105,7 +107,7 @@ def main():
         return 1
 
     cache_size = SIZES[trace_name]
-    trace_file = trace_path.name
+    trace_file = trace_path
 
     Path('/home/results').mkdir(parents=True, exist_ok=True)
 
@@ -118,7 +120,7 @@ def main():
 
     run_lhd(config_path, trace_name)
 
-    run_lrb(trace_path, trace_name, cache_size)
+    run_lrb(trace_file.name, trace_name, cache_size)
 
     config_path.unlink()
 
