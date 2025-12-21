@@ -1,4 +1,5 @@
 import csv
+import re
 import xxhash
 import argparse
 from pathlib import Path
@@ -74,25 +75,42 @@ def process_csv_batches(input_file: Path, output_file: Path, batch_size: int = 1
     print(f"Output file: {output_file}")
 
 
+def extract_cluster_number(filename: str) -> str | None:
+    match = re.search(r'cluster(\d{2})', filename)
+    if match:
+        return match.group(1)
+    return None
+
+
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--input_file', required=True, type=str, help='Path to input trace file')
-    parser.add_argument('-o', '--output_file', required=True, type=str, help='Path to output filtered trace')
-    parser.add_argument('--batch-size', type=int, required=False, default=10000, 
+    parser = argparse.ArgumentParser(description='Parse Twitter trace file')
+    parser.add_argument('-i', '--input-file', required=True, type=str, help='Path to input trace file')
+    parser.add_argument('-o', '--output-path', required=True, type=str, help='Output directory path')
+    parser.add_argument('--batch-size', type=int, required=False, default=10000,
                         help='Number of rows to process at a time (default: 10000)')
-    
+
     args = parser.parse_args()
-    
-    print(args)
-    
+
     input_file = Path(args.input_file)
     if not input_file.exists() or not input_file.is_file():
-        print(f"Error: Input file '{args.input_file}' is invalid")
+        print(f"[bold red]Error: Input file '{args.input_file}' does not exist")
         exit(1)
-    
-    output_file = Path(args.output_file)
-    output_file.parent.mkdir(parents=True, exist_ok=True)
-        
+
+    cluster_number = extract_cluster_number(input_file.name)
+    if cluster_number is None:
+        print(f'[bold red]Error: Cannot extract cluster number from filename {input_file.name}')
+        print(f'[yellow]Expected format: clusterXX...')
+        exit(1)
+
+    output_dir = Path(args.output_path)
+    output_filename = f'twitter{cluster_number}.trace'
+    output_file = output_dir / output_filename
+
+    print(f'Input file: {str(input_file.resolve())}')
+    print(f'Output file: {str(output_file.resolve())}')
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
     process_csv_batches(input_file, output_file, args.batch_size)
 
 

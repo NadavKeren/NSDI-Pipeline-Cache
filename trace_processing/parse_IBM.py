@@ -1,24 +1,23 @@
 import argparse
+import re
 from pathlib import Path
-
-from typing import List
 
 from rich import pretty, print
 pretty.install()
 
 def parseLine(entry: str) -> str | None:
     splitted_line = entry.split(' ')
-    
+
     time = splitted_line[0]
     cmd = splitted_line[1]
     object_id = splitted_line[2]
-    
+
     if not 'DELETE' in cmd and not 'SET' in cmd:
         return f'{time} {object_id}'
     else:
         return None
 
-def _processFile(input_path: Path, output_path: Path) -> None:
+def processFile(input_path: Path, output_path: Path) -> None:
     with input_path.open(encoding='utf-8', errors='replace') as raw_file:
         lines_processed = 0
         lines_removed = 0
@@ -34,46 +33,47 @@ def _processFile(input_path: Path, output_path: Path) -> None:
                 line = raw_file.readline()
         print(f"[green]Processed {lines_processed} lines ignoring [yellow]{lines_removed}")
 
-                
-def processFiles(files: List[Path], output_dir: Path):
-    print(f'[bold yellow]Processing the files: [bold cyan]{[f.name for f in files]}\n')
-    for file in files:
-        output_path = output_dir / file.name
-        if not output_path.exists():
-            print(f'[orange]Start processing [purple]{file.name}')
-            _processFile(file, output_path)
+def extract_trace_number(filename: str) -> str | None:
+    """Extract trace number from IBM filename format: IBMObjectStoreTraceXXXPart0 -> XXX"""
+    match = re.search(r'IBMObjectStoreTrace(\d{3})Part0', filename)
+    if match:
+        return match.group(1)
+    return None
 
-            print(f'[green]Done processing: [purple]{file.name}')
-    print(f'[bold cyan]Done processing files\n\n')
-    
-    
+
 def main():
-    parser = argparse.ArgumentParser(description='Parse IBM Object Storage trace files')
-    parser.add_argument('-i', '--input-dir', help='Input directory containing raw trace files', type=str, required=True)
-    parser.add_argument('-o', '--output-dir', help='Output directory for parsed traces (default: <input-dir>/parsed_traces/IBMObjectStore)', type=str, default=None)
+    parser = argparse.ArgumentParser(description='Parse IBM Object Storage trace file')
+    parser.add_argument('-i', '--input-file', help='Input trace file', type=str, required=True)
+    parser.add_argument('-o', '--output-path', help='Output directory path', type=str, required=True)
 
     args = parser.parse_args()
 
-    input_dir = Path(args.input_dir)
+    input_file = Path(args.input_file)
+    output_dir = Path(args.output_path)
 
-    if args.output_dir is None:
-        output_dir = input_dir / 'parsed_traces/IBMObjectStore'
-    else:
-        output_dir = Path(args.output_dir)
-
-    print(f'Input dir: {str(input_dir.resolve())} Output dir: {str(output_dir.resolve())}')
-
-    if not input_dir.exists():
-        print(f'[bold red]Error: Input directory {input_dir} does not exist')
+    if not input_file.exists():
+        print(f'[bold red]Error: Input file {input_file} does not exist')
         return
 
-    input_files_paths = [f for f in input_dir.iterdir()
-                         if f.is_file()
-                         and f.name.startswith('IBMObjectStore')]
+    # Extract trace number from filename
+    trace_number = extract_trace_number(input_file.name)
+    if trace_number is None:
+        print(f'[bold red]Error: Cannot extract trace number from filename {input_file.name}')
+        print(f'[yellow]Expected format: IBMObjectStoreTraceXXXPart0')
+        return
+
+    # Generate output filename
+    output_filename = f'IBM{trace_number}.trace'
+    output_file = output_dir / output_filename
+
+    print(f'Input file: {str(input_file.resolve())}')
+    print(f'Output file: {str(output_file.resolve())}')
 
     output_dir.mkdir(exist_ok=True, parents=True)
 
-    processFiles(input_files_paths, output_dir)
+    print(f'[orange]Start processing [purple]{input_file.name}')
+    processFile(input_file, output_file)
+    print(f'[green]Done processing: [purple]{input_file.name} -> [cyan]{output_filename}')
 
      
 if __name__ == '__main__':

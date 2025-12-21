@@ -1,7 +1,6 @@
 import argparse
+import re
 from pathlib import Path
-
-from typing import List
 
 from rich import pretty, print
 
@@ -22,7 +21,7 @@ def parseLine(entry: str) -> str | None:
     else:
         return None
 
-def _processFile(input_path: Path, output_path: Path) -> None:
+def processFile(input_path: Path, output_path: Path) -> None:
     with input_path.open(encoding='utf-8', errors='replace') as raw_file:
         lines_processed = 0
         lines_removed = 0
@@ -38,42 +37,50 @@ def _processFile(input_path: Path, output_path: Path) -> None:
                 line = raw_file.readline()
         print(f"[green]Processed {lines_processed} lines ignoring [yellow]{lines_removed}")
 
+def extract_metakv_version(filename: str) -> str | None:
+    match = re.search(r'metakv([24])', filename)
+    if match:
+        return match.group(1)
 
-def processFiles(files: List[Path], input_dir: Path, output_dir: Path):
-    print(f'[bold yellow]Processing the files: [bold cyan]{[f.name for f in files]}\n')
-    for file in files:
-        output_path = output_dir / file.name
-        if not output_path.exists():
-            print(f'[orange]Start processing [purple]{file.name}')
-            _processFile(file, output_path)
+    if '202210_kv_' in filename:
+        return '2'
+    if '202401_kv_' in filename:
+        return '4'
 
-            print(f'[green]Done processing: [purple]{file.name}')
-    print(f'[bold cyan]Done processing files\n\n')
+    return None
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Parse metaKV trace files')
-    parser.add_argument('-i', '--input-dir', help='Input directory containing raw metaKV trace files', type=str, required=True)
-    parser.add_argument('-o', '--output-dir', help='Output directory for parsed traces (default: ./parsed_traces/metaKV)', type=str, default='./parsed_traces/metaKV')
+    parser = argparse.ArgumentParser(description='Parse metaKV trace file')
+    parser.add_argument('-i', '--input-file', help='Input trace file', type=str, required=True)
+    parser.add_argument('-o', '--output-path', help='Output directory path', type=str, required=True)
 
     args = parser.parse_args()
 
-    input_dir = Path(args.input_dir)
-    output_dir = Path(args.output_dir)
+    input_file = Path(args.input_file)
+    output_dir = Path(args.output_path)
 
-    print(f'Input dir: {str(input_dir.resolve())} Output dir: {str(output_dir.resolve())}')
-
-    if not input_dir.exists():
-        print(f'[bold red]Error: Input directory {input_dir} does not exist')
+    if not input_file.exists():
+        print(f'[bold red]Error: Input file {input_file} does not exist')
         return
 
-    input_files_paths = [f for f in input_dir.iterdir()
-                         if f.is_file()
-                         and f.name.lower().startswith('metakv')]
+    version = extract_metakv_version(input_file.name)
+    if version is None:
+        print(f'[bold red]Error: Cannot extract metakv version from filename {input_file.name}')
+        print(f'[yellow]Expected format: metakvX-... or 202210_kv_... or 202401_kv_...')
+        return
+
+    output_filename = f'metakv{version}.trace'
+    output_file = output_dir / output_filename
+
+    print(f'Input file: {str(input_file.resolve())}')
+    print(f'Output file: {str(output_file.resolve())}')
 
     output_dir.mkdir(exist_ok=True, parents=True)
 
-    processFiles(input_files_paths, input_dir, output_dir)
+    print(f'[orange]Start processing [purple]{input_file.name}')
+    processFile(input_file, output_file)
+    print(f'[green]Done processing: [purple]{input_file.name} -> [cyan]{output_filename}')
 
 
 if __name__ == '__main__':
