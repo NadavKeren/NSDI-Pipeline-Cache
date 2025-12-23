@@ -3,53 +3,50 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import random
+import json
 
 from pathlib import Path
 
 from rich import print, pretty
 
-from types import MappingProxyType
-
 pretty.install()
 
+config_file = Path(__file__).parent / 'synthetic_trace_config.json'
+with config_file.open('r') as f:
+    config = json.load(f)
+
+TOTAL_TICKS = config['trace']['total_ticks']
+TICK_TIME = config['trace']['tick_time_ms']
+LATENCY = config['trace']['latency']
+
+TRACE_CONF = config['items']
+
+RECENCY_CONF = {
+    "MIN_OCCUR_LEN": config['recency']['min_occur_len'],
+    "MAX_OCCUR_LEN": config['recency']['max_occur_len'],
+    "MIN_TIME_BETWEEN_REQ": config['recency']['min_time_between_req'],
+    "MAX_TIME_BETWEEN_REQ": config['recency']['max_time_between_req']
+}
+
+FREQ_CONF = {
+    "MIN_TIME_BETWEEN_REQ": int(TICK_TIME * config['frequency']['min_time_between_req_factor']) + 1,
+    "MAX_TIME_BETWEEN_REQ": int(TICK_TIME * config['frequency']['max_time_between_req_factor']) + 1,
+    "MIN_FIRST_OCCUR_TIME": TICK_TIME * config['frequency']['min_first_occur_time_ticks'],
+    "MAX_FIRST_OCCUR_TIME": TICK_TIME * config['frequency']['max_first_occur_time_ticks']
+}
+
+BURST_CONF = {
+    "MIN_LEN": config['burstiness']['min_len'],
+    "MAX_LEN": config['burstiness']['max_len'],
+    "MIN_BURSTS": config['burstiness']['min_bursts'],
+    "MAX_BURSTS": config['burstiness']['max_bursts'],
+    "MIN_TIME_BETWEEN_BURSTS": TICK_TIME * (TOTAL_TICKS // config['burstiness']['time_between_bursts_divisor']),
+    "MAX_FIRST_OCCUR_TIME": TICK_TIME * (TOTAL_TICKS // config['burstiness']['max_first_occur_divisor']),
+    "MIN_LAST_OCCUR_TIME": TICK_TIME * (TOTAL_TICKS * config['burstiness']['min_last_occur_factor'] // config['burstiness']['min_last_occur_divisor']),
+    "MAX_LAST_OCCUR_TIME": TICK_TIME * TOTAL_TICKS - config['burstiness']['max_last_occur_offset']
+}
+
 OUTPUT_FORMAT = 'pdf'
-
-TOTAL_TICKS = 75000
-NUM_OF_FREQ = 100
-TICK_TIME = 1000
-
-RECENCY_CONF = MappingProxyType({
-    "MIN_OCCUR_LEN": 24,
-    "MAX_OCCUR_LEN": 33,
-    "MIN_TIME_BETWEEN_REQ": 700,
-    "MAX_TIME_BETWEEN_REQ": 900
-})
-
-FREQ_CONF = MappingProxyType({
-    "MIN_TIME_BETWEEN_REQ": TICK_TIME + 1,
-    "MAX_TIME_BETWEEN_REQ": int(TICK_TIME * 1.1) + 1,
-    "MIN_FIRST_OCCUR_TIME": TICK_TIME,
-    "MAX_FIRST_OCCUR_TIME": TICK_TIME * 100
-})
-
-BURST_CONF = MappingProxyType({
-    "MIN_LEN": 900,
-    "MAX_LEN": 1100,
-    "MIN_BURSTS": 70,
-    "MAX_BURSTS": 80,
-    "MIN_TIME_BETWEEN_BURSTS": TICK_TIME * (TOTAL_TICKS // 60),
-    "MAX_FIRST_OCCUR_TIME": TICK_TIME * (TOTAL_TICKS // 100),
-    "MIN_LAST_OCCUR_TIME": TICK_TIME * (TOTAL_TICKS // 100 * 95),
-    "MAX_LAST_OCCUR_TIME": TICK_TIME * TOTAL_TICKS - 1500
-})
-
-TRACE_CONF = MappingProxyType({
-    'RECENCY': 250000,
-    'FREQUENCY': 100,
-    'BURSTINESS': 100,
-    'ONE_HIT_WONDERS': 150000
-})
-
 BIN_SIZE = 10
 MAX_TICK_TO_SHOW = 900
 TOTAL_BINS_TO_SHOW = MAX_TICK_TO_SHOW // BIN_SIZE
@@ -174,34 +171,33 @@ def gen_trace(rng : np.random.Generator) -> None:
     print(RECENCY_CONF)
     print(FREQ_CONF)
     print(BURST_CONF)
-    
+
     arr = []
     count = 0
-    LATENCY = 1000
     
     count_rec = 0
     count_freq = 0
     count_burst = 0
-    
-    for i in range(TRACE_CONF['RECENCY']):
+
+    for i in range(TRACE_CONF['recency']):
         op = create_recency_item(rng, count, LATENCY)
         arr.extend(op)
         count += 1
         count_rec += len(op)
-    
-    for i in range(TRACE_CONF['FREQUENCY']):
+
+    for i in range(TRACE_CONF['frequency']):
         op = create_frequency_item(rng, count, LATENCY)
         arr.extend(op)
         count += 1
         count_freq += len(op)
-        
-    for i in range(TRACE_CONF['BURSTINESS']):
+
+    for i in range(TRACE_CONF['burstiness']):
         op = create_burstiness_item(rng, count, LATENCY)
         arr.extend(op)
         count += 1
         count_burst += len(op)
-        
-    for i in range(TRACE_CONF['ONE_HIT_WONDERS']):
+
+    for i in range(TRACE_CONF['one_hit_wonders']):
         op = (random.randint(0, TOTAL_TICKS * TICK_TIME), count, 0, LATENCY)
         arr.append(op)
         count += 1

@@ -1,22 +1,24 @@
-import argparse
 from pathlib import Path
+from typing import Dict
+from rich import print
+import json
 
-from rich import print, pretty
+config_file = Path(__file__).parent / 'synthetic_trace_config.json'
+with config_file.open('r') as f:
+    config = json.load(f)
 
-from synthetic_trace_gen import TRACE_CONF
-
-pretty.install()
+TRACE_CONF = config['items']
 
 
-def split_results_dump(input_file: Path, output_dir: Path = None) -> None:
+def split_results_dump(input_file: Path, output_dir: Path = None) -> Dict[str, Path]:
     recency_start = 0
-    recency_end = TRACE_CONF['RECENCY']
+    recency_end = TRACE_CONF['recency']
 
     frequency_start = recency_end
-    frequency_end = frequency_start + TRACE_CONF['FREQUENCY']
+    frequency_end = frequency_start + TRACE_CONF['frequency']
 
     burstiness_start = frequency_end
-    burstiness_end = burstiness_start + TRACE_CONF['BURSTINESS']
+    burstiness_end = burstiness_start + TRACE_CONF['burstiness']
 
     print(f'[bold cyan]Key ranges:')
     print(f'  RECENCY: [{recency_start}, {recency_end})')
@@ -74,34 +76,8 @@ def split_results_dump(input_file: Path, output_dir: Path = None) -> None:
     print(f'  {frequency_output}')
     print(f'  {burstiness_output}')
 
-
-def main():
-    parser = argparse.ArgumentParser(description='Split results_dump file by item type (RECENCY, FREQUENCY, BURSTINESS)')
-    parser.add_argument('input', help='Input results_dump file path', type=str)
-    parser.add_argument('-o', '--output-dir', help='Output directory (default: same as input file)', type=str, required=False)
-
-    args = parser.parse_args()
-
-    input_file = Path(args.input)
-
-    if not input_file.exists():
-        print(f'[bold red]Error: Input file {input_file} does not exist')
-        return
-
-    output_dir = Path(args.output_dir) if args.output_dir else None
-
-    print(f'[bold]Splitting results_dump file:[/bold]')
-    print(f'  Input: {input_file}')
-    print(f'  Output directory: {output_dir if output_dir else input_file.parent}')
-    print(f'\n[bold]Trace configuration (from synthetic_trace_gen.py):[/bold]')
-    print(f'  RECENCY items: {TRACE_CONF["RECENCY"]:,}')
-    print(f'  FREQUENCY items: {TRACE_CONF["FREQUENCY"]:,}')
-    print(f'  BURSTINESS items: {TRACE_CONF["BURSTINESS"]:,}')
-    print(f'  ONE_HIT_WONDERS items: {TRACE_CONF["ONE_HIT_WONDERS"]:,}')
-    print()
-
-    split_results_dump(input_file, output_dir)
-
-
-if __name__ == '__main__':
-    main()
+    return {
+        'recency': recency_output,
+        'frequency': frequency_output,
+        'burstiness': burstiness_output
+    }
