@@ -14,8 +14,8 @@ def batched_file_reader(file_path: Path) -> Iterator[List[str]]:
             batch = list(islice(f, BATCH_SIZE))
             if not batch:
                 break
-            # Strip whitespace and filter empty lines
-            batch = [line.strip() for line in batch if line.strip()]
+            
+            batch = [line.strip() for line in batch]
             if batch:
                 yield batch
 
@@ -37,8 +37,8 @@ def process_batches(trace_file: Path, marked_file: Path, output_path: Path, mult
             
             for line1, line2 in zip(batch1, batch2):
                 line_num = total_processed + 1
-                time1, id1, hit_penalty, miss_penalty = line1.split()
-                time2, id2, is_hit = line2.split()
+                time1, id1, miss_penalty = line1.split()
+                time2, _, is_hit = line2.split()
                 time1 = int(time1)
                 time2 = int(time2)
                 time2 *= multiplier
@@ -47,7 +47,7 @@ def process_batches(trace_file: Path, marked_file: Path, output_path: Path, mult
                     print(f"[bold red]Error: Line {line_num} - timestamp mismatch: {time1} != {time2}")
                     exit(1)
                 
-                merged_line = f"{time1} {id1} {hit_penalty} {miss_penalty} {is_hit}\n"
+                merged_line = f"{time1} {id1} {miss_penalty} {is_hit}\n"
                 output_file.write(merged_line)
                 
                 total_processed += 1
