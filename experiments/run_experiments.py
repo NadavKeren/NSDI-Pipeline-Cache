@@ -30,10 +30,10 @@ OUTPUT_SUFFIX = ""
 
 NUM_OF_QUANTA = 16
 
-SIZES = {'trace010' : 2 ** 9, 'trace024' : 2 ** 9, 'trace031' : 2 ** 16,
-         'trace045' : 2 ** 12, 'trace034' : 2 ** 14, 'trace029' : 2 ** 9,
-         'trace012' : 2 ** 10, 'twitter-cluster1' : 2 ** 10, 'twitter-cluster3' : 2 ** 10,
-         'twitter-cluster9' : 2 ** 12, 'twitter-cluster28' : 2 ** 12, "metakv4" : 2 ** 13,
+SIZES = {'ibm010' : 2 ** 9, 'ibm024' : 2 ** 9, 'ibm031' : 2 ** 16,
+         'ibm045' : 2 ** 12, 'ibm034' : 2 ** 14, 'ibm029' : 2 ** 9,
+         'ibm012' : 2 ** 10, 'twitter01' : 2 ** 10, 'twitter03' : 2 ** 10,
+         'twitter09' : 2 ** 12, 'twitter28' : 2 ** 12, "metakv4" : 2 ** 13,
          "metakv2" : 2 ** 13}
 
 PIPELINE_CA_SETTINGS_WITHOUT_QUOTA = {"pipeline.num-of-blocks" : 3,
@@ -377,7 +377,7 @@ def main():
     
     file = Path(args.input)
 
-    trace_name = args.trace_name if args.trace_name else get_trace_name(file)
+    trace_name = args.trace_name if args.trace_name else file.stem.lower()
     cache_size = args.cache_size if args.cache_size else SIZES.get(trace_name)
     dists = get_dists(file)
 
