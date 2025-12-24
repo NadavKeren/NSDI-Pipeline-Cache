@@ -377,10 +377,14 @@ def main():
     
     file = Path(args.input)
 
-    trace_name = args.trace_name if args.trace_name else file.stem.lower()
+    trace_name = args.trace_name if args.trace_name else file.stem.split('-')[0].lower()
     cache_size = args.cache_size if args.cache_size else SIZES.get(trace_name)
     dists = get_dists(file)
 
+    if (cache_size is None):
+        console.print(f'[bold red]Error: no default cache size for trace: {trace_name}, please provide a cache size using --cache-size')
+        exit(1)
+    
     global OUTPUT_SUFFIX
     OUTPUT_SUFFIX = f'{trace_name}-{dists}-{cache_size}'
     
